@@ -1,15 +1,20 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Antenna Array Optimizer API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: predictions
+    description: Antenna configuration predictions
+  - name: simulations
+    description: Antenna array simulations
+  - name: history
+    description: Prediction history
 paths:
   /healthz:
     get:
@@ -24,6 +29,149 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /predictions:
+    get:
+      operationId: listPredictions
+      tags: [predictions]
+      summary: List all predictions
+      description: Returns all saved antenna configuration predictions
+      responses:
+        "200":
+          description: List of predictions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Prediction"
+
+  /predictions/stats:
+    get:
+      operationId: getPredictionStats
+      tags: [predictions]
+      summary: Get prediction statistics
+      description: Returns aggregated stats about predictions
+      responses:
+        "200":
+          description: Prediction statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PredictionStats"
+
+  /predictions/{id}:
+    get:
+      operationId: getPrediction
+      tags: [predictions]
+      summary: Get a prediction by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Prediction found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prediction"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deletePrediction
+      tags: [predictions]
+      summary: Delete a prediction
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /simulate:
+    post:
+      operationId: simulateAntenna
+      tags: [simulations]
+      summary: Simulate antenna array radiation pattern
+      description: Computes radiation pattern for a given antenna configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulateAntennaBody"
+      responses:
+        "200":
+          description: Simulation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimulationResult"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /simulate/compare:
+    post:
+      operationId: compareConfigurations
+      tags: [simulations]
+      summary: Compare two antenna configurations
+      description: Simulates and compares reference vs predicted configurations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompareConfigurationsBody"
+      responses:
+        "200":
+          description: Comparison result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComparisonResult"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /history:
+    get:
+      operationId: getRecentHistory
+      tags: [history]
+      summary: Get recent prediction history
+      description: Returns last N prediction records
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Recent history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Prediction"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +182,197 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    AntennaConfig:
+      type: object
+      description: Number of antenna elements per ring (5 rings, 2-8 elements each)
+      properties:
+        ring1:
+          type: integer
+          minimum: 2
+          maximum: 8
+        ring2:
+          type: integer
+          minimum: 2
+          maximum: 8
+        ring3:
+          type: integer
+          minimum: 2
+          maximum: 8
+        ring4:
+          type: integer
+          minimum: 2
+          maximum: 8
+        ring5:
+          type: integer
+          minimum: 2
+          maximum: 8
+      required: [ring1, ring2, ring3, ring4, ring5]
+
+    PerformanceMetrics:
+      type: object
+      properties:
+        hpbw:
+          type: number
+          description: Half-power beamwidth in degrees
+        mainLobeGain:
+          type: number
+          description: Main lobe gain in dB
+        sideLobeLevel:
+          type: number
+          description: Side lobe level in dB
+      required: [hpbw, mainLobeGain, sideLobeLevel]
+
+    RadiationPattern:
+      type: object
+      properties:
+        thetaDeg:
+          type: array
+          items:
+            type: number
+          description: Azimuth angle values in degrees (0-360)
+        afDb:
+          type: array
+          items:
+            type: number
+          description: Array factor in dB (normalized)
+      required: [thetaDeg, afDb]
+
+    SimulateAntennaBody:
+      type: object
+      properties:
+        config:
+          $ref: "#/components/schemas/AntennaConfig"
+        theta0Deg:
+          type: number
+          description: Steering angle in degrees
+          default: 90
+      required: [config]
+
+    SimulationResult:
+      type: object
+      properties:
+        config:
+          $ref: "#/components/schemas/AntennaConfig"
+        theta0Deg:
+          type: number
+        pattern:
+          $ref: "#/components/schemas/RadiationPattern"
+        metrics:
+          $ref: "#/components/schemas/PerformanceMetrics"
+      required: [config, theta0Deg, pattern, metrics]
+
+    CompareConfigurationsBody:
+      type: object
+      properties:
+        reference:
+          $ref: "#/components/schemas/AntennaConfig"
+        predicted:
+          $ref: "#/components/schemas/AntennaConfig"
+        theta0Deg:
+          type: number
+          description: Steering angle in degrees
+          default: 90
+      required: [reference, predicted]
+
+    ComparisonResult:
+      type: object
+      properties:
+        theta0Deg:
+          type: number
+        reference:
+          type: object
+          properties:
+            config:
+              $ref: "#/components/schemas/AntennaConfig"
+            pattern:
+              $ref: "#/components/schemas/RadiationPattern"
+            metrics:
+              $ref: "#/components/schemas/PerformanceMetrics"
+          required: [config, pattern, metrics]
+        predicted:
+          type: object
+          properties:
+            config:
+              $ref: "#/components/schemas/AntennaConfig"
+            pattern:
+              $ref: "#/components/schemas/RadiationPattern"
+            metrics:
+              $ref: "#/components/schemas/PerformanceMetrics"
+          required: [config, pattern, metrics]
+        errors:
+          type: object
+          properties:
+            hpbwError:
+              type: number
+            mainLobeGainError:
+              type: number
+            sidelobeLevelError:
+              type: number
+            globalError:
+              type: number
+          required: [hpbwError, mainLobeGainError, sidelobeLevelError, globalError]
+      required: [theta0Deg, reference, predicted, errors]
+
+    Prediction:
+      type: object
+      properties:
+        id:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        theta0Deg:
+          type: number
+        referenceConfig:
+          $ref: "#/components/schemas/AntennaConfig"
+        predictedConfig:
+          $ref: "#/components/schemas/AntennaConfig"
+        referenceMetrics:
+          $ref: "#/components/schemas/PerformanceMetrics"
+        predictedMetrics:
+          $ref: "#/components/schemas/PerformanceMetrics"
+        globalError:
+          type: number
+      required:
+        - id
+        - createdAt
+        - theta0Deg
+        - referenceConfig
+        - predictedConfig
+        - referenceMetrics
+        - predictedMetrics
+        - globalError
+
+    PredictionStats:
+      type: object
+      properties:
+        totalPredictions:
+          type: integer
+        avgGlobalError:
+          type: number
+        avgHpbwError:
+          type: number
+        avgMainLobeGainError:
+          type: number
+        avgSidelobeLevelError:
+          type: number
+        bestPredictionId:
+          type: ["integer", "null"]
+        worstPredictionId:
+          type: ["integer", "null"]
+      required:
+        - totalPredictions
+        - avgGlobalError
+        - avgHpbwError
+        - avgMainLobeGainError
+        - avgSidelobeLevelError
+        - bestPredictionId
+        - worstPredictionId
