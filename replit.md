@@ -4,6 +4,19 @@
 
 A full-stack SaaS dashboard for RF engineers to simulate, analyze, and compare circular antenna array radiation patterns using AI-predicted configurations. The backend performs real antenna physics simulations (array factor computation) and stores prediction history. The frontend provides interactive ring configuration tools, polar radiation pattern charts, and performance metrics (HPBW, main lobe gain, side lobe level).
 
+## ML Pipeline (End-to-End)
+
+1. **Simulate Pattern** — user sets ring config (R1-R5 elements) + steering angle → radiation pattern computed by physics engine → polar chart shown
+2. **Analyze in Compare** button — captures the polar chart SVG as a PNG → saves config, metrics, pattern, and image blob in a global React context (`SimulationStore`)
+3. **Compare Configurations** — auto-loads from the store, automatically:
+   - Posts the saved image to `POST /api/predict-from-image`
+   - Backend spawns `python3 artifacts/api-server/src/lib/infer.py` with the image + model path
+   - MobileNetV2 CNN loads `attached_assets/antenna_config_model_35_1775864227285.pth`, runs inference, returns `{ring1..ring5}` JSON
+   - Frontend auto-runs comparison between reference (simulated) and predicted (model output)
+   - Shows overlay polar chart + accuracy metrics (global error, HPBW Δ, gain Δ, SLL Δ)
+
+**Color coding**: Reference = #38bdf8 (sky blue), Predicted = #a78bfa (violet)
+
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces

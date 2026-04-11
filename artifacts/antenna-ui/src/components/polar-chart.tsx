@@ -1,5 +1,5 @@
 import React from "react";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { RadiationPattern } from "@workspace/api-client-react";
 
 interface PolarChartProps {
@@ -9,6 +9,7 @@ interface PolarChartProps {
     color: string;
   }[];
   height?: number;
+  containerRef?: React.RefObject<HTMLDivElement>;
 }
 
 function ChartLegend({ patterns }: { patterns: PolarChartProps["patterns"] }) {
@@ -34,7 +35,7 @@ function ChartLegend({ patterns }: { patterns: PolarChartProps["patterns"] }) {
   );
 }
 
-export default function PolarChart({ patterns, height = 400 }: PolarChartProps) {
+export default function PolarChart({ patterns, height = 400, containerRef }: PolarChartProps) {
   const mergedData = React.useMemo(() => {
     if (!patterns.length) return [];
     const baseTheta = patterns[0].data.thetaDeg;
@@ -58,7 +59,7 @@ export default function PolarChart({ patterns, height = 400 }: PolarChartProps) 
   const formatDb = (val: number) => `${val} dB`;
 
   return (
-    <div className="relative bg-card rounded-xl border border-border p-4">
+    <div ref={containerRef} className="relative bg-card rounded-xl border border-border p-4">
       <div style={{ height, width: "100%" }}>
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart cx="50%" cy="50%" outerRadius="80%" data={mergedData} startAngle={90} endAngle={-270}>

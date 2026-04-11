@@ -10,6 +10,7 @@ import Compare from "@/pages/compare";
 import History from "@/pages/history";
 import HistoryDetail from "@/pages/history-detail";
 import Layout from "@/components/layout";
+import { SimulationStoreProvider } from "@/lib/simulation-store";
 
 const queryClient = new QueryClient();
 
@@ -36,10 +37,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
+        <SimulationStoreProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+          <Toaster />
+        </SimulationStoreProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

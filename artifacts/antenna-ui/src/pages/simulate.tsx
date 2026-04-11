@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { useSimulateAntenna, AntennaConfig } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,17 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import RingDiagram from "@/components/ring-diagram";
 import PolarChart from "@/components/polar-chart";
-import { Loader2, Radio } from "lucide-react";
+import { Loader2, Radio, GitCompare, CheckCircle2 } from "lucide-react";
+import { useLocation } from "wouter";
+import { useSimulationStore, captureElementAsBlob } from "@/lib/simulation-store";
 
 export default function Simulate() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const { setSnapshot } = useSimulationStore();
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [sentToCompare, setSentToCompare] = useState(false);
+
   const [config, setConfig] = useState<AntennaConfig>({
     ring1: 2,
     ring2: 4,
@@ -24,6 +31,7 @@ export default function Simulate() {
   const simulateMutation = useSimulateAntenna();
 
   const handleSimulate = () => {
+    setSentToCompare(false);
     simulateMutation.mutate(
       { data: { config, theta0Deg: theta0 } },
       {
@@ -37,6 +45,27 @@ export default function Simulate() {
       }
     );
   };
+
+  const handleSendToCompare = useCallback(async () => {
+    const result = simulateMutation.data;
+    if (!result) return;
+
+    const patternImageBlob = await captureElementAsBlob(chartRef.current!);
+    setSnapshot({
+      config,
+      metrics: result.metrics,
+      pattern: result.pattern,
+      theta0Deg: theta0,
+      patternImageBlob,
+      capturedAt: Date.now(),
+    });
+    setSentToCompare(true);
+    toast({
+      title: "Sent to Compare",
+      description: "The simulation will be used as reference. Navigating to Compare.",
+    });
+    setTimeout(() => navigate("/compare"), 600);
+  }, [simulateMutation.data, config, theta0, setSnapshot, navigate, toast]);
 
   const result = simulateMutation.data;
 
@@ -84,14 +113,34 @@ export default function Simulate() {
                 />
               </div>
 
-              <Button 
-                className="w-full" 
+              <Button
+                className="w-full"
                 onClick={handleSimulate}
                 disabled={simulateMutation.isPending}
               >
-                {simulateMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Radio className="w-4 h-4 mr-2" />}
+                {simulateMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Radio className="w-4 h-4 mr-2" />
+                )}
                 Run Simulation
               </Button>
+
+              {result && (
+                <Button
+                  variant="outline"
+                  className="w-full border-violet-500/40 text-violet-300 hover:bg-violet-500/10 hover:text-violet-200"
+                  onClick={handleSendToCompare}
+                  disabled={sentToCompare}
+                >
+                  {sentToCompare ? (
+                    <CheckCircle2 className="w-4 h-4 mr-2 text-green-400" />
+                  ) : (
+                    <GitCompare className="w-4 h-4 mr-2" />
+                  )}
+                  {sentToCompare ? "Sent to Compare" : "Analyze in Compare"}
+                </Button>
+              )}
             </CardContent>
           </Card>
 
@@ -116,27 +165,36 @@ export default function Simulate() {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="p-4 bg-muted/30 rounded-lg border border-border">
                       <div className="text-sm text-muted-foreground">Half-Power Beamwidth</div>
-                      <div className="text-2xl font-mono font-bold mt-1">{result.metrics.hpbw.toFixed(2)}°</div>
+                      <div className="text-2xl font-mono font-bold mt-1">
+                        {result.metrics.hpbw.toFixed(2)}°
+                      </div>
                     </div>
                     <div className="p-4 bg-muted/30 rounded-lg border border-border">
                       <div className="text-sm text-muted-foreground">Main Lobe Gain</div>
-                      <div className="text-2xl font-mono font-bold mt-1">{result.metrics.mainLobeGain.toFixed(2)} dB</div>
+                      <div className="text-2xl font-mono font-bold mt-1">
+                        {result.metrics.mainLobeGain.toFixed(2)} dB
+                      </div>
                     </div>
                     <div className="p-4 bg-muted/30 rounded-lg border border-border">
                       <div className="text-sm text-muted-foreground">Side Lobe Level</div>
-                      <div className="text-2xl font-mono font-bold mt-1">{result.metrics.sideLobeLevel.toFixed(2)} dB</div>
+                      <div className="text-2xl font-mono font-bold mt-1">
+                        {result.metrics.sideLobeLevel.toFixed(2)} dB
+                      </div>
                     </div>
                   </div>
-                  
+
                   <div className="pt-4">
                     <h3 className="font-medium mb-4">Radiation Pattern (Azimuth)</h3>
-                    <PolarChart 
-                      patterns={[{
-                        data: result.pattern,
-                        name: "Simulated",
-                        color: "hsl(var(--primary))"
-                      }]}
+                    <PolarChart
+                      patterns={[
+                        {
+                          data: result.pattern,
+                          name: "Simulated",
+                          color: "#38bdf8",
+                        },
+                      ]}
                       height={450}
+                      containerRef={chartRef}
                     />
                   </div>
                 </div>
