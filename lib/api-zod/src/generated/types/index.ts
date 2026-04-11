@@ -16,6 +16,7 @@ export * from "./errorResponse";
 export * from "./getRecentHistoryParams";
 export * from "./healthStatus";
 export * from "./performanceMetrics";
+export * from "./predictFromImageBody";
 export * from "./prediction";
 export * from "./predictionStats";
 export * from "./radiationPattern";

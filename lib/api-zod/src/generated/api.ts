@@ -357,6 +357,54 @@ export const SimulateAntennaResponse = zod.object({
 });
 
 /**
+ * Uploads a radiation pattern image and returns the predicted antenna configuration using the CNN model
+ * @summary Predict antenna config from radiation pattern image
+ */
+export const PredictFromImageBody = zod.object({
+  image: zod.instanceof(File),
+});
+
+export const predictFromImageResponseRing1Min = 2;
+export const predictFromImageResponseRing1Max = 8;
+
+export const predictFromImageResponseRing2Min = 2;
+export const predictFromImageResponseRing2Max = 8;
+
+export const predictFromImageResponseRing3Min = 2;
+export const predictFromImageResponseRing3Max = 8;
+
+export const predictFromImageResponseRing4Min = 2;
+export const predictFromImageResponseRing4Max = 8;
+
+export const predictFromImageResponseRing5Min = 2;
+export const predictFromImageResponseRing5Max = 8;
+
+export const PredictFromImageResponse = zod
+  .object({
+    ring1: zod
+      .number()
+      .min(predictFromImageResponseRing1Min)
+      .max(predictFromImageResponseRing1Max),
+    ring2: zod
+      .number()
+      .min(predictFromImageResponseRing2Min)
+      .max(predictFromImageResponseRing2Max),
+    ring3: zod
+      .number()
+      .min(predictFromImageResponseRing3Min)
+      .max(predictFromImageResponseRing3Max),
+    ring4: zod
+      .number()
+      .min(predictFromImageResponseRing4Min)
+      .max(predictFromImageResponseRing4Max),
+    ring5: zod
+      .number()
+      .min(predictFromImageResponseRing5Min)
+      .max(predictFromImageResponseRing5Max),
+  })
+  .describe("Number of antenna elements per ring (5 rings, 2-8 elements each)");
+
+/**
  * Simulates and compares reference vs predicted configurations
  * @summary Compare two antenna configurations
  */

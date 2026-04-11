@@ -17,11 +17,13 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AntennaConfig,
   CompareConfigurationsBody,
   ComparisonResult,
   ErrorResponse,
   GetRecentHistoryParams,
   HealthStatus,
+  PredictFromImageBody,
   Prediction,
   PredictionStats,
   SimulateAntennaBody,
@@ -521,6 +523,95 @@ export const useSimulateAntenna = <
   TContext
 > => {
   return useMutation(getSimulateAntennaMutationOptions(options));
+};
+
+/**
+ * Uploads a radiation pattern image and returns the predicted antenna configuration using the CNN model
+ * @summary Predict antenna config from radiation pattern image
+ */
+export const getPredictFromImageUrl = () => {
+  return `/api/predict-from-image`;
+};
+
+export const predictFromImage = async (
+  predictFromImageBody: PredictFromImageBody,
+  options?: RequestInit,
+): Promise<AntennaConfig> => {
+  const formData = new FormData();
+  formData.append(`image`, predictFromImageBody.image);
+
+  return customFetch<AntennaConfig>(getPredictFromImageUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getPredictFromImageMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof predictFromImage>>,
+    TError,
+    { data: BodyType<PredictFromImageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof predictFromImage>>,
+  TError,
+  { data: BodyType<PredictFromImageBody> },
+  TContext
+> => {
+  const mutationKey = ["predictFromImage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof predictFromImage>>,
+    { data: BodyType<PredictFromImageBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return predictFromImage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PredictFromImageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof predictFromImage>>
+>;
+export type PredictFromImageMutationBody = BodyType<PredictFromImageBody>;
+export type PredictFromImageMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Predict antenna config from radiation pattern image
+ */
+export const usePredictFromImage = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof predictFromImage>>,
+    TError,
+    { data: BodyType<PredictFromImageBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof predictFromImage>>,
+  TError,
+  { data: BodyType<PredictFromImageBody> },
+  TContext
+> => {
+  return useMutation(getPredictFromImageMutationOptions(options));
 };
 
 /**

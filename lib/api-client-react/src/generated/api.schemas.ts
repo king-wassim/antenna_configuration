@@ -129,6 +129,10 @@ export interface PredictionStats {
   worstPredictionId: number | null;
 }
 
+export type PredictFromImageBody = {
+  image: Blob;
+};
+
 export type GetRecentHistoryParams = {
   limit?: number;
 };

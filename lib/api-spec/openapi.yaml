@@ -124,6 +124,43 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /predict-from-image:
+    post:
+      operationId: predictFromImage
+      tags: [predictions]
+      summary: Predict antenna config from radiation pattern image
+      description: Uploads a radiation pattern image and returns the predicted antenna configuration using the CNN model
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+              required: [image]
+      responses:
+        "200":
+          description: Predicted antenna configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AntennaConfig"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Inference error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /simulate/compare:
     post:
       operationId: compareConfigurations
