@@ -156,11 +156,8 @@ export default function Compare() {
     setPredMetrics(null);
     compareMutation.reset();
 
-    const form = new FormData();
-    form.append("image", snapshot.patternImageBlob, "pattern.png");
-
     inferMutation.mutate(
-      { data: form as unknown as { image: Blob } },
+      { data: { image: snapshot.patternImageBlob as Blob } },
       {
         onSuccess: (config) => {
           const predictedCfg = config as AntennaConfig;

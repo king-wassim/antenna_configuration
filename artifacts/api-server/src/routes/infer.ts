@@ -17,11 +17,12 @@ const INFER_SCRIPT = path.resolve(__dirname, "../src/lib/infer.py");
 const upload = multer({
   dest: os.tmpdir(),
   limits: { fileSize: 10 * 1024 * 1024 },
+  // Accept image/* and application/octet-stream (browsers sometimes omit MIME type for canvas blobs)
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
+    if (file.mimetype.startsWith("image/") || file.mimetype === "application/octet-stream") {
       cb(null, true);
     } else {
-      cb(new Error("Only image files are accepted"));
+      cb(new Error(`Unsupported file type: ${file.mimetype}`));
     }
   },
 });

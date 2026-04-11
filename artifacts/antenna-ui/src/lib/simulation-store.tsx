@@ -48,42 +48,71 @@ export function useSimulationStore() {
   return ctx;
 }
 
-export async function captureElementAsBlob(
-  element: HTMLElement,
-  bgColor = "#0f172a"
+/**
+ * Generate a grayscale polar radiation pattern image from pattern data.
+ * Matches the format the CNN model was trained on: black background,
+ * white/bright line for the pattern, polar axes, -40 to 0 dB range.
+ */
+export function generatePatternImageBlob(
+  pattern: RadiationPattern,
+  size = 512
 ): Promise<Blob | null> {
-  const svg = element.querySelector("svg");
-  if (!svg) return null;
-
-  const { width, height } = svg.getBoundingClientRect();
-  if (!width || !height) return null;
-
-  const clonedSvg = svg.cloneNode(true) as SVGSVGElement;
-  clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  clonedSvg.setAttribute("width", String(width));
-  clonedSvg.setAttribute("height", String(height));
-
-  const svgData = new XMLSerializer().serializeToString(clonedSvg);
-  const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-  const url = URL.createObjectURL(svgBlob);
-
   return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = 2;
-      const canvas = document.createElement("canvas");
-      canvas.width = width * scale;
-      canvas.height = height * scale;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) { resolve(null); return; }
-      ctx.scale(scale, scale);
-      ctx.fillStyle = bgColor;
-      ctx.fillRect(0, 0, width, height);
-      ctx.drawImage(img, 0, 0, width, height);
-      URL.revokeObjectURL(url);
-      canvas.toBlob((blob) => resolve(blob), "image/png");
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-    img.src = url;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) { resolve(null); return; }
+
+    const cx = size / 2;
+    const cy = size / 2;
+    const maxR = (size / 2) * 0.88;
+
+    // Black background (matching training data)
+    ctx.fillStyle = "#000000";
+    ctx.fillRect(0, 0, size, size);
+
+    // Draw faint polar grid rings
+    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.lineWidth = 0.8;
+    for (let db = -40; db <= 0; db += 10) {
+      const r = maxR * (1 - Math.abs(db) / 40);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+      ctx.stroke();
+    }
+
+    // Draw faint angle spokes
+    for (let angleDeg = 0; angleDeg < 360; angleDeg += 30) {
+      const rad = (angleDeg * Math.PI) / 180;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + maxR * Math.cos(rad), cy + maxR * Math.sin(rad));
+      ctx.stroke();
+    }
+
+    // Draw the radiation pattern line
+    const { thetaDeg, afDb } = pattern;
+    const DB_MIN = -40;
+    const DB_MAX = 0;
+
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    let first = true;
+    for (let i = 0; i < thetaDeg.length; i++) {
+      const theta = (thetaDeg[i] * Math.PI) / 180;
+      const dbClamped = Math.max(DB_MIN, Math.min(DB_MAX, afDb[i]));
+      const normalised = (dbClamped - DB_MIN) / (DB_MAX - DB_MIN); // 0..1
+      const r = normalised * maxR;
+      const x = cx + r * Math.cos(theta);
+      const y = cy + r * Math.sin(theta);
+      if (first) { ctx.moveTo(x, y); first = false; }
+      else { ctx.lineTo(x, y); }
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    canvas.toBlob((blob) => resolve(blob), "image/png");
   });
 }

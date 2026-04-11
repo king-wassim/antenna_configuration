@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { useSimulateAntenna, AntennaConfig } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,12 @@ import RingDiagram from "@/components/ring-diagram";
 import PolarChart from "@/components/polar-chart";
 import { Loader2, Radio, GitCompare, CheckCircle2 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useSimulationStore, captureElementAsBlob } from "@/lib/simulation-store";
+import { useSimulationStore, generatePatternImageBlob } from "@/lib/simulation-store";
 
 export default function Simulate() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const { setSnapshot } = useSimulationStore();
-  const chartRef = useRef<HTMLDivElement>(null);
   const [sentToCompare, setSentToCompare] = useState(false);
 
   const [config, setConfig] = useState<AntennaConfig>({
@@ -50,7 +49,9 @@ export default function Simulate() {
     const result = simulateMutation.data;
     if (!result) return;
 
-    const patternImageBlob = await captureElementAsBlob(chartRef.current!);
+    // Generate a grayscale polar pattern image from the computed pattern data.
+    // This matches the format the CNN was trained on (black background, white line, polar coords).
+    const patternImageBlob = await generatePatternImageBlob(result.pattern);
     setSnapshot({
       config,
       metrics: result.metrics,
@@ -194,7 +195,6 @@ export default function Simulate() {
                         },
                       ]}
                       height={450}
-                      containerRef={chartRef}
                     />
                   </div>
                 </div>
