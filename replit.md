@@ -2,7 +2,9 @@
 
 ## Overview
 
-A full-stack SaaS dashboard for RF engineers to simulate, analyze, and compare circular antenna array radiation patterns using AI-predicted configurations. The backend performs real antenna physics simulations (array factor computation) and stores prediction history. The frontend provides interactive ring configuration tools, polar radiation pattern charts, and performance metrics (HPBW, main lobe gain, side lobe level).
+This project is a full-stack monorepo for simulating circular antenna arrays, comparing radiation patterns, and running ML-based inference on captured pattern images.
+
+The backend performs antenna physics simulations, stores prediction history, and calls a Python inference script when image-based predictions are needed. The frontend provides interactive ring configuration tools, polar radiation pattern charts, and comparison metrics such as HPBW, main lobe gain, and side lobe level.
 
 ## ML Pipeline (End-to-End)
 
@@ -10,7 +12,7 @@ A full-stack SaaS dashboard for RF engineers to simulate, analyze, and compare c
 2. **Analyze in Compare** button — captures the polar chart SVG as a PNG → saves config, metrics, pattern, and image blob in a global React context (`SimulationStore`)
 3. **Compare Configurations** — auto-loads from the store, automatically:
    - Posts the saved image to `POST /api/predict-from-image`
-   - Backend spawns `python3 artifacts/api-server/src/lib/infer.py` with the image + model path
+  - Backend spawns `python3 backend/api-server/src/lib/infer.py` with the image + model path
    - MobileNetV2 CNN loads `attached_assets/antenna_config_model_35_1775864227285.pth`, runs inference, returns `{ring1..ring5}` JSON
    - Frontend auto-runs comparison between reference (simulated) and predicted (model output)
    - Shows overlay polar chart + accuracy metrics (global error, HPBW Δ, gain Δ, SLL Δ)
@@ -32,12 +34,12 @@ A full-stack SaaS dashboard for RF engineers to simulate, analyze, and compare c
 
 ## Architecture
 
-### Frontend (`artifacts/antenna-ui`)
+### Frontend (`frontend/antenna-ui`)
 - Dark navy + cyan/electric blue theme — scientific instrument aesthetic
 - Pages: Dashboard, Simulate Pattern, Compare Configurations, History & Analysis, History Detail
 - Real-time antenna physics via API — no local computation
 
-### Backend (`artifacts/api-server`)
+### Backend (`backend/api-server`)
 - Physics engine in `src/lib/antenna-physics.ts`:
   - Array factor (AF) computation for circular antenna arrays
   - Radiation pattern in dB with normalization
@@ -45,10 +47,10 @@ A full-stack SaaS dashboard for RF engineers to simulate, analyze, and compare c
   - Error computation between reference and predicted configs
 - Routes: `/api/simulate`, `/api/simulate/compare`, `/api/predictions`, `/api/history`
 
-### Database (`lib/db`)
+### Database (`shared/db`)
 - `predictions` table: stores reference/predicted configs (JSONB), metrics, steering angle, and global error
 
-### API Contract (`lib/api-spec/openapi.yaml`)
+### API Contract (`shared/api-spec/openapi.yaml`)
 - Key endpoints:
   - `POST /simulate` — single config simulation
   - `POST /simulate/compare` — compare two configs
